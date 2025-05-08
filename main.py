@@ -7,7 +7,7 @@ config = yaml.load(open("config.yml", "r", encoding="utf-8"), Loader=yaml.FullLo
 
 if __name__ == '__main__':
     itest = ITest(config['username'], config['password'], model=config['ai']['model'],
-                  driver_type=config['driver_type'], api_key=config['ai']['apikey'], base_url=config['ai']['model'])
+                  driver_type=config['driver_type'], api_key=config['ai']['apikey'], base_url=config['ai']['base_url'])
     exams = itest.get_exams()
     for exam in exams:
         print(exam)
