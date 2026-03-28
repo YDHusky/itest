@@ -2,8 +2,10 @@ import json
 import os
 import shutil
 import time
+from urllib.parse import urlparse, parse_qs
 
 from husky_spider_utils import SeleniumSession
+from selenium.webdriver.common.by import By
 
 from kimi_model import ItestKimi
 from mp32str import mp3_to_wav, wav_to_str
@@ -49,6 +51,47 @@ class ITest:
                 exams_list.extend(data)
         return exams_list
 
+    def get_mock(self):
+        self.session.selenium_get("https://itestcloud.unipus.cn/utest/itest/s/train")
+        res = self.session.get("https://itestcloud.unipus.cn/utest/itest/s/jcxl/mock")
+        from parsel import Selector
+        html = Selector(text=res.text)
+        mock_table = html.css(".paper-table tbody tr")
+        mock_data = []
+        for tr in mock_table:
+            tds = tr.css("td")
+            mock_data.append({
+                "id": tds[0].css("::text").extract_first(),
+                "mock_id": tds[1].css("::text").extract_first(),
+                "name": tds[2].css("::text").extract_first(),
+                "times": tds[3].css("::text").extract_first(),
+                "score": tds[4].css("::text").extract_first(),
+            })
+        return mock_data
+
+    def to_mock_exam(self, mock_info):
+        mock_id = mock_info['mock_id']
+        url = f"https://itestcloud.unipus.cn/utest/itest/s/jcxl/mock/doMockTest?ppId={mock_id}&returnUrl=https://itestcloud.unipus.cn/utest/itest/s/jcxl/mock"
+        self.session.selenium_get(url)
+        current_url = self.session.get_current_url()
+        parsed_url = urlparse(current_url)
+        params = parse_qs(parsed_url.query)
+        token = params.get('token', [None])[0]
+        self.session.try_click(".layui-layer-btn0", max_attempt=1, timeout=5)
+        self.common_to_exam(token=token, return_url='https://itestcloud.unipus.cn/utest/itest/s/jcxl/mock&skipEnvTest=true')
+
+    def common_to_exam(self, token:str, return_url:str):
+        payload = {
+            "token": token
+        }
+        data = {}
+        self.session.headers.update(payload)
+        res = self.session.post("https://itestcloud.unipus.cn/utest/itest-mobile-api/student/exam/examToken", data=data)
+        url = res.json()["rs"]["url"] + f"&returnUrl={return_url}"
+        self.session.selenium_get(url)
+        self.session.try_click(".layui-layer-btn0", max_attempt=1, timeout=3)
+        self.session.try_click("#success-ok", max_attempt=1, timeout=3)
+
     def to_exam(self, exam_info):
         ksd_id = exam_info['ksdId']
         payload = {
@@ -58,23 +101,13 @@ class ITest:
         if exam_info['examCodeFlag']:
             payload['examCode'] = input("请输入六位考试码:")
         res = self.session.post("https://itestcloud.unipus.cn/utest/itest/s/clsanswer/judgeEntry", data=payload)
-        print(res.json())
         url = res.json()["data"]["url"]
         token = res.json()["data"]["token"]
 
         url = url + "&returnUrl=https://itestcloud.unipus.cn/utest/itest/s/exam"
         self.session.selenium_get(url)
         self.session.try_click(".layui-layer-btn0", max_attempt=1, timeout=5)
-        payload = {
-            "token": token
-        }
-        data = {}
-        self.session.headers.update(payload)
-        res = self.session.post("https://itestcloud.unipus.cn/utest/itest-mobile-api/student/exam/examToken", data=data)
-        url = res.json()["rs"]["url"] + "&returnUrl=https://itestcloud.unipus.cn/utest/itest/s/exam&skipEnvTest=true"
-        self.session.selenium_get(url)
-        self.session.try_click(".layui-layer-btn0", max_attempt=1, timeout=3)
-        self.session.try_click("#success-ok", max_attempt=1, timeout=3)
+        self.common_to_exam(token, 'https://itestcloud.unipus.cn/utest/itest/s/exam&skipEnvTest=true')
 
     def download_mp3(self):
         sections = self.session.get_element_selector("#main-content .itest-section")
