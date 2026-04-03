@@ -674,6 +674,7 @@ class MainWindow(QMainWindow):
         if not data:
             return
         self.selected_exam = data
+        print(data)
         self.selected_is_mock = is_mock
         self.selected_is_train = is_train
         
@@ -963,8 +964,8 @@ class MainWindow(QMainWindow):
         if not exams:
             self._log("暂无正式考试")
         for exam in exams:
-            name = exam.get('examName', '未知')
-            status = exam.get('statusName', '')
+            name = exam.get('ksName', '未知')
+            status = exam['canKaoshiJudgeBean']['kaoshiStatusInfo']
             item = QListWidgetItem(f"📋 {name}\n   状态: {status}")
             item.setData(Qt.UserRole, exam)
             self.exam_list.addItem(item)

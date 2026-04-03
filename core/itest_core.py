@@ -390,7 +390,7 @@ class ITest:
         # 设置音频缓存上下文
         self._current_audio_context = {'type': 'exam', 'id': str(ksd_id)}
         
-        logger.info(f"进入考试: {exam_info.get('examName', 'Unknown')}")
+        logger.info(f"进入考试: {exam_info.get('ksName', 'Unknown')}")
         
         payload = {
             "examId": ksd_id,
@@ -405,11 +405,12 @@ class ITest:
         
         try:
             res = self.session.post(
-                "https://itestcloud.unipus.cn/utest/itest/s/clsanswer/judgeEntry",
+                "https://itestcloud.unipus.cn/utest/itest/s/exam/judgeEntry",
                 data=payload
             )
             result = res.json()
-            
+            if result['code'] == 0:
+                raise Exception(result['msg'])
             url = result["data"]["url"]
             token = result["data"]["token"]
             
