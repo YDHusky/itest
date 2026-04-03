@@ -58,4 +58,5 @@ itest/
 
 ## 许可证
 
-MIT License
+GNU AFFERO GENERAL PUBLIC LICENSE
+
